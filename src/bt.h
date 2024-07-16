@@ -9,15 +9,110 @@
 #include <NimBLEDevice.h>
 #include <NimBLEAdvertising.h>
 #include <WebServer.h>
+#include <SD.h>
+#include <SdFat.h>
 const char compileDate[] = __DATE__ " " __TIME__;
 char apName[] = "ESP32-xxxxxxxxxxxx";
 bool usePrimAP = true;
 bool hasCredentials = false;
 volatile bool isConnected = false;
 bool connStatusChanged = false;
-
 WebServer server(80);
 String receivedData = "";
+
+File myFile;
+const int CS = 5;
+const char* files[] = {"/txt_1.txt", "/txt_2.txt", "/txt_3.txt"};
+const char* file = "/txt_4.txt";
+const char* file_c = "/txt_2.txt";
+const char* messages[] = {"hello", "world", "again"};
+String message;
+
+void WriteFile(const char * path) {
+  // open the file in append mode
+  myFile = SD.open(path, FILE_APPEND);
+  // if the file opened okay, write to it:
+  if (myFile) {
+    Serial.printf("Writing to %s ", path);
+    message = server.arg("data");
+    myFile.println(message);
+    myFile.close(); // close the file:
+    Serial.println("completed.");
+  } 
+  // if the file didn't open, print an error:
+  else {
+    Serial.print("error opening file ");
+    Serial.println(path);
+  }
+}
+
+void ReadFile(const char * path) {
+  // open the file for reading:
+  myFile = SD.open(path);
+  if (myFile) {
+    Serial.printf("Reading file from %s\n", path);
+    // read from the file until there's nothing else in it:
+    while (myFile.available()) {
+      Serial.write(myFile.read());
+    }
+    myFile.close(); // close the file:
+  } 
+  else {
+    // if the file didn't open, print an error:
+    Serial.print("error opening file ");
+    Serial.println(path);
+  }
+}
+
+void AddFile(const char* path, const char* file) {
+  myFile = SD.open(file, FILE_WRITE);
+  if (myFile) {
+    myFile.close();
+    Serial.printf("%s added successfully.\n", file);
+  } else {
+    Serial.printf("Error adding %s\n", file);
+  }
+}
+
+void ListFiles(const char* dirname, uint8_t levels) {
+  File root = SD.open(dirname);
+
+  if (!root) {
+    Serial.println("Failed to open directory");
+    return;
+  }
+  if (!root.isDirectory()) {
+    Serial.println("Not a directory");
+    return;
+  }
+
+  File file = root.openNextFile();
+  while (file) {
+    if (file.isDirectory()) {
+      Serial.println(file.name());
+      if (levels) {
+        ListFiles(file.name(), levels - 1);/*KONTROL EDİLECEK*/
+      }
+    } else {
+      Serial.print("FILE: ");
+      Serial.print(file.name());
+      Serial.print("\tSIZE: ");
+      Serial.println(file.size());
+    }
+    file = root.openNextFile();
+  }
+}
+
+void ClearInFile(const char* path, const char* file_c) {
+  myFile = SD.open(file_c,FILE_WRITE);
+  if(myFile) {
+    myFile.close();
+    Serial.printf("Succesfully cleared %s",myFile);
+  }
+  else {
+    Serial.printf("Couldn't clear file");
+  }
+}
 
 void handleRoot() {
   server.sendHeader("Access-Control-Allow-Origin", "*");
@@ -35,6 +130,7 @@ void handleGet() {
 void handlePost() {
   server.sendHeader("Access-Control-Allow-Origin", "*");
   String data = server.arg("data");
+  WriteFile("/data.txt");
   Serial.println("Data (Post): " + data);
   server.send(200, "text/plain", "Data Received");
 }

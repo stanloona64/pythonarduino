@@ -6,6 +6,23 @@ void setup()
 {
     Serial.begin(9600);
     initBLEWIFI();
+
+    delay(500);
+    while (!Serial) { ; }  // wait for serial port to connect. Needed for native USB port only
+    Serial.println("Initializing SD card...");
+    if (!SD.begin(CS)) {
+        Serial.println("initialization failed!");
+        return;
+    }
+    
+    WriteFile(file_c);
+
+    /*for (int i = 0; i < 4; i++) {
+    ReadFile(files[i]);
+    }*/
+
+
+    Serial.println("initialization done.");
     server.on("/", handleRoot);
     server.on("/get", HTTP_GET, handleGet);
     server.on("/post", HTTP_POST, handlePost);
